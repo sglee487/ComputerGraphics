@@ -77,13 +77,19 @@ def gaus_filtering(img, kernel, boundary = 0):
     ksizeY, ksizeX = kernel.shape[0], kernel.shape[1]
     pad_image = my_padding(img, (ksizeY, ksizeX), boundary = boundary) # 경계가 padding된 이미지 생성.
     filtered_img = np.zeros((row,col), dtype = np.float32)
-    print(pad_image)
+    # print(pad_image)
     print("pad_image.shape[0] " + str(pad_image.shape[0]))
     print("pad_image.shape[1] " + str(pad_image.shape[1]))
+    print(ksizeY, ksizeX)
     # print(filtered_img)
-    # for i in range(row):
-    #     for j in range(col):
-    #         #filtering 부분을 작성해주세요.
+    print(row, col)
+    print(filtered_img.shape[0],filtered_img.shape[1])
+    print(filtered_img[2999][2999])
+    for i in range(row):
+        filtered_img[row][2]
+        # for j in range(col):
+        #     #filtering 부분을 작성해주세요.
+        #     filtered_img[row][col] = pad_image[row][col]
 
     return filtered_img
 
@@ -102,7 +108,7 @@ img1D = gaus_filtering(img1D, gaus1D.T, boundary = 0)
 end = time.perf_counter()
 print(end-start)
 
-# cv2.imshow('img1D', img1D.astype(np.uint8))
-# cv2.imshow('img2D', img2D.astype(np.uint8))
-# cv2.waitKey()
-# cv2.destroyAllWindows()
+cv2.imshow('img1D', img1D.astype(np.uint8))
+cv2.imshow('img2D', img2D.astype(np.uint8))
+cv2.waitKey()
+cv2.destroyAllWindows()
