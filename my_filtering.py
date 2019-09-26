@@ -80,32 +80,32 @@ def gaus_filtering(img, kernel, boundary = 0):
     # print(pad_image)
     # print("pad_image.shape[0] " + str(pad_image.shape[0]))
     # print("pad_image.shape[1] " + str(pad_image.shape[1]))
-    print(ksizeY, ksizeX)
+    # print(ksizeY, ksizeX)
     # # print(filtered_img)
     # print(row, col)
     # print(filtered_img.shape[0],filtered_img.shape[1])
     # print(filtered_img[2999][3999])
-    print(kernel.sum())
-    part = pad_image[1000:1200,1000:1300]
-    print(part.shape[0],part.shape[1])
+    # print(kernel.sum())
+    # print(part.shape[0],part.shape[1])
     # print(pad_image[500-ksizeY//2:500+ksizeY//2][700-ksizeX//2:700+ksizeX//2])
+    print(kernel.shape[0],kernel.shape[1])
     for i in range(row):
+        # print(i)
         for j in range(col):
             #filtering 부분을 작성해주세요.
-            filtered_img[i][j] = pad_image[i-ksizeY//2:i+ksizeY//2,j-ksizeX//2:j+ksizeX//2] * kernel
             # filtered_img[i][j] = pad_image[i-ksizeY//2:i+ksizeY//2,j-ksizeX//2:j+ksizeX//2] * kernel
-            filtered_img[i][j] = pad_image[i:i+ksizeY,j:j+ksizeX] * kernel
+            # filtered_img[i][j] = pad_image[i-ksizeY//2:i+ksizeY//2,j-ksizeX//2:j+ksizeX//2] * kernel
+            # temp = pad_image[i:i + ksizeY, j:j + ksizeX]
+            # temp2 = temp * (kernel / kernel.sum())
+            # filtered_img[i][j] = np.round(temp2.sum())
+            filtered_img[i][j] = np.round(((pad_image[i:i + ksizeY, j:j + ksizeX]) * (kernel / kernel.sum())).sum())
+            # filtered_img[i][j] = pad_image[i:i+ksizeY,j:j+ksizeX] * kernel
 
     return filtered_img
 
-src = cv2.imread('Big_size_Prawns.jpeg', 0) #TA 사용 이미지 ( 4000 x 3000 )
+src = cv2.imread('image.jpg', 0) #TA 사용 이미지 ( 4000 x 3000 )
 gaus2D = my_getGKernel((51,51), 13)
 gaus1D = my_getGKernel((1,51), 13)
-
-start = time.perf_counter() # 시간 측정
-img2D = gaus_filtering(src, gaus2D,boundary = 0) #boundary = 0, 1, 2 골라서 사용. 미입력시 0 (zero-padding)
-end = time.perf_counter()
-print(end-start)
 
 start = time.perf_counter()
 img1D = gaus_filtering(src, gaus1D, boundary = 0)
@@ -113,7 +113,20 @@ img1D = gaus_filtering(img1D, gaus1D.T, boundary = 0)
 end = time.perf_counter()
 print(end-start)
 
+start = time.perf_counter() # 시간 측정
+img2D = gaus_filtering(src, gaus2D,boundary = 0) #boundary = 0, 1, 2 골라서 사용. 미입력시 0 (zero-padding)
+end = time.perf_counter()
+print(end-start)
+
+# start = time.perf_counter()
+# img1D = gaus_filtering(src, gaus1D, boundary = 0)
+# img1D = gaus_filtering(img1D, gaus1D.T, boundary = 0)
+# end = time.perf_counter()
+# print(end-start)
+
 # cv2.imshow('img1D', img1D.astype(np.uint8))
+cv2.imwrite('./image_2Dfilter.jpg',img2D)
+cv2.imwrite('./image_1Dfilter.jpg',img1D)
 # cv2.imshow('img2D', img2D.astype(np.uint8))
 # cv2.waitKey()
 # cv2.destroyAllWindows()
