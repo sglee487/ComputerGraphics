@@ -103,9 +103,9 @@ def gaus_filtering(img, kernel, boundary = 0):
 
     return filtered_img
 
-src = cv2.imread('image.jpg', 0) #TA 사용 이미지 ( 4000 x 3000 )
-gaus2D = my_getGKernel((51,51), 13)
-gaus1D = my_getGKernel((1,51), 13)
+src = cv2.imread('image_lbig.jpg', 0) #TA 사용 이미지 ( 4000 x 3000 )
+gaus2D = my_getGKernel((101,101), 13)
+gaus1D = my_getGKernel((1,101), 13)
 
 start = time.perf_counter()
 img1D = gaus_filtering(src, gaus1D, boundary = 0)
@@ -125,8 +125,8 @@ print(end-start)
 # print(end-start)
 
 # cv2.imshow('img1D', img1D.astype(np.uint8))
-cv2.imwrite('./image_2Dfilter.jpg',img2D)
-cv2.imwrite('./image_1Dfilter.jpg',img1D)
+cv2.imwrite('./image_lbig_2Dfilter_bigkernel.jpg',img2D)
+cv2.imwrite('./image_lbig_1Dfilter_birkernel.jpg',img1D)
 # cv2.imshow('img2D', img2D.astype(np.uint8))
 # cv2.waitKey()
 # cv2.destroyAllWindows()
