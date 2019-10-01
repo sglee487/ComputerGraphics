@@ -66,7 +66,7 @@ def my_getGKernel(shape, sigma):
     # print (gaus)
     return gaus
 
-def gaus_filtering(img, kernel, boundary = 0):
+def my_filtering(img, kernel, boundary = 0):
     '''
     :param img: Gaussian filtering을 적용 할 이미지
     :param kernel: 이미지에 적용 할 Gaussian Kernel
@@ -98,35 +98,36 @@ def gaus_filtering(img, kernel, boundary = 0):
             # temp = pad_image[i:i + ksizeY, j:j + ksizeX]
             # temp2 = temp * (kernel / kernel.sum())
             # filtered_img[i][j] = np.round(temp2.sum())
-            filtered_img[i][j] = np.round(((pad_image[i:i + ksizeY, j:j + ksizeX]) * (kernel / kernel.sum())).sum())
+            # filtered_img[i][j] = np.round(((pad_image[i:i + ksizeY, j:j + ksizeX]) * (kernel / kernel.sum())).sum())
+            filtered_img[i,j] = np.sum(np.multiply(pad_image[i:i + ksizeY,j:j + ksizeX],kernel))
             # filtered_img[i][j] = pad_image[i:i+ksizeY,j:j+ksizeX] * kernel
 
     return filtered_img
 
-src = cv2.imread('image_lbig.jpg', 0) #TA 사용 이미지 ( 4000 x 3000 )
-gaus2D = my_getGKernel((101,101), 13)
-gaus1D = my_getGKernel((1,101), 13)
-
-start = time.perf_counter()
-img1D = gaus_filtering(src, gaus1D, boundary = 0)
-img1D = gaus_filtering(img1D, gaus1D.T, boundary = 0)
-end = time.perf_counter()
-print(end-start)
-
-start = time.perf_counter() # 시간 측정
-img2D = gaus_filtering(src, gaus2D,boundary = 0) #boundary = 0, 1, 2 골라서 사용. 미입력시 0 (zero-padding)
-end = time.perf_counter()
-print(end-start)
-
+# src = cv2.imread('image_lbig.jpg', 0) #TA 사용 이미지 ( 4000 x 3000 )
+# gaus2D = my_getGKernel((101,101), 13)
+# gaus1D = my_getGKernel((1,101), 13)
+#
 # start = time.perf_counter()
-# img1D = gaus_filtering(src, gaus1D, boundary = 0)
-# img1D = gaus_filtering(img1D, gaus1D.T, boundary = 0)
+# img1D = my_filtering(src, gaus1D, boundary = 0)
+# img1D = my_filtering(img1D, gaus1D.T, boundary = 0)
 # end = time.perf_counter()
 # print(end-start)
-
-# cv2.imshow('img1D', img1D.astype(np.uint8))
-cv2.imwrite('./image_lbig_2Dfilter_bigkernel.jpg',img2D)
-cv2.imwrite('./image_lbig_1Dfilter_birkernel.jpg',img1D)
-# cv2.imshow('img2D', img2D.astype(np.uint8))
-# cv2.waitKey()
-# cv2.destroyAllWindows()
+#
+# start = time.perf_counter() # 시간 측정
+# img2D = my_filtering(src, gaus2D,boundary = 0) #boundary = 0, 1, 2 골라서 사용. 미입력시 0 (zero-padding)
+# end = time.perf_counter()
+# print(end-start)
+#
+# # start = time.perf_counter()
+# # img1D = gaus_filtering(src, gaus1D, boundary = 0)
+# # img1D = gaus_filtering(img1D, gaus1D.T, boundary = 0)
+# # end = time.perf_counter()
+# # print(end-start)
+#
+# # cv2.imshow('img1D', img1D.astype(np.uint8))
+# cv2.imwrite('./image_lbig_2Dfilter_bigkernel.jpg',img2D)
+# cv2.imwrite('./image_lbig_1Dfilter_birkernel.jpg',img1D)
+# # cv2.imshow('img2D', img2D.astype(np.uint8))
+# # cv2.waitKey()
+# # cv2.destroyAllWindows()
