@@ -11,20 +11,34 @@ def find_zerocrossing(LoG, thresh = 0.01): #0이 아니라 ,thresh를 사용하�
     :return: zero-crossing 지점만 255값을 가지는 이미지.
     '''
 
-    buho = [0,0,0,0,0,0,0,0]
+    buho = [thresh,thresh,thresh,thresh,thresh,thresh,thresh,thresh]
     y, x = len(LoG), len(LoG[0])
     res = np.zeros((y,x), dtype = np.uint8)
     for i in range (1, y-1): #맨 처음과 맨 마지막은 제외.(검사에서 경계를 넘어가지 않도록)
         for j in range (1, x-1):
+            res[i][j] = 0
+            if (LoG[i][j] == 0):
+                print("zero")
             # zero-crossing을 검사하는 코드를 작성해주세요.
-            if ((LoG[i - 1][j - 1] * LoG[i - 1][j] * LoG[i - 1][j + 1] * LoG[i][j - 1] * LoG[i][j + 1] * LoG[i + 1][j - 1] * LoG[i + 1][j] * LoG[i + 1][j + 1]) < thresh) :
-                    res[i][j] = 225
-            else :
-                    res[i][j] = 0
-            # if (LoG[i-1][j] * LoG[i-1][j+1] < thresh):
-            #     res[i][j] = 225
-            # else:
-            #     res[i][j] = 0
+            buho[0] = LoG[i - 1][j - 1]
+            buho[1] = LoG[i - 1][j]
+            buho[2] = LoG[i - 1][j + 1]
+            buho[3] = LoG[i][j + 1]
+            buho[4] = LoG[i + 1][j + 1]
+            buho[5] = LoG[i + 1][j]
+            buho[6] = LoG[i + 1][j-1]
+            buho[7] = LoG[i][j - 1]
+            if (buho[0] > thresh ):
+                for k in range(1,8):
+                    if (buho[k] < thresh):
+                        res[i][j] = 225
+                        break
+            if (buho[0] < thresh ):
+                for k in range(1,8):
+                    if (buho[k] > thresh):
+                        res[i][j] = 225
+                        break
+
 
     return res
 
@@ -36,18 +50,14 @@ def my_LoG(img, ksize=7, boundary = 0):  # default sigma =1, sigma = 0.3(n/2 -1)
     :param boundary: filtering 경계 처리 방법. 0 : zero-padding,(default) 1 : repetition, 2 : mirroring
     :return: LoG 방법으로 찾아낸 Edge 이미지.
     '''
-    sigma = 1
+    sigma = 2.5
     LoG = np.ones((ksize,ksize))
     middleX = ksize//2
     middleY = ksize//2
-    # print(middleX, middleY)
+    gesu = (1 / (2 * np.pi * np.square(sigma)))
     for i in range(ksize):
         for j in range(ksize):
-            # gaus[i][j] = (i-middleX)+(j-middleY)
-            # gaus[i][j] = np.exp(-1 * (np.square((i))+ np.square(j)) / (2 * np.square(sigma)))
-            # Log[i][j] = np.exp(-1 * (np.square((i-middleX)) + np.square(j-middleY)) / (2 * np.square(sigma)))
-            LoG[i][j] = -1*(1-((np.square((i-middleX)) + np.square(j-middleY)) / (2*np.square(sigma)))) * (1/(np.pi * sigma ** 4)) * np.exp(-1 * (np.square((i-middleX)) + np.square(j-middleY)) / (2 * np.square(sigma)))
-            # gaus[i][j] = np.exp(-1*((i-middleX)^2+(j-middleY)^2)/(2*sigma^2))
+            LoG[i][j] = -1 * gesu *(1-((np.square((i-middleX)) + np.square(j-middleY)) / (2*np.square(sigma)))) * (1/(np.pi * sigma ** 4)) * np.exp(-1 * (np.square((i-middleX)) + np.square(j-middleY)) / (2 * np.square(sigma)))
 
     LoG_img = my_filtering(img, LoG, boundary=boundary) # LoG는 만들어진 kernel
     LoG_img = find_zerocrossing(LoG_img)
@@ -62,12 +72,20 @@ def my_DoG(img, ksize, sigma = 1, gx = 0, boundary = 0): #default (3,3) sigma = 
     :param boundary: filtering 경계 처리 방법. 0 : zero-padding,(default) 1 : repetition, 2 : mirroring
     :return: 축에대한 미분 결과값 ( Gradient 값 )
     '''
-    DoG = np.ones((ksize,ksize))
-    middleX = ksize//2
-    middleY = ksize//2
-    # print(middleX, middleY)
-    for i in range(ksize):
-        DoG[i][j] = np.exp(-1 * (np.square((i - middleX)) + np.square(j - middleY)) / (2 * np.square(sigma)))
+    gesu = (1 / (2 * np.pi * np.square(sigma)))
+    if (gx == 0):
+        DoG = np.ones((1,ksize))
+        middleX = ksize // 2
+        for i in range(1):
+            for j in range(ksize):
+                DoG[i][j] = -1 * gesu * ((j-middleX)/(sigma ** 2)) * np.exp(-1 * ((np.square(j-middleX) / (2 * (sigma ** 2)))))
+
+    elif (gx == 1):
+        DoG = np.ones((ksize,1))
+        middleY = ksize // 2
+        for i in range(ksize):
+            for j in range(1):
+                DoG[i][j] = -1 * gesu * ((i-middleY)/(sigma ** 2)) * np.exp(-1 * ((np.square(i-middleY) / (2 * (sigma ** 2)))))
 
     DoG_img = my_filtering(img, DoG, boundary = boundary) # DoG 는 만들어진 kernel
 
@@ -77,11 +95,12 @@ src = cv2.imread('./lena.png', 1)
 gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
 
 LoG = my_LoG(gray, 15)
-# DoGX = my_DoG(gray, 15, sigma = 3, gx = 1, boundary =0) #boundary는 자유롭게 입력해주세요.
-# DoGY = my_DoG(gray, 15, sigma = 3, gx = 0, boundary =0)
+DoGX = my_DoG(gray, 15, sigma = 4.2, gx = 1, boundary =0) #boundary는 자유롭게 입력해주세요.
+DoGY = my_DoG(gray, 15, sigma = 4.2, gx = 0, boundary =0)
+DoG = (DoGX**2 + DoGY**2) ** (1/2)
 # DoG = np.roots(np.square(DoGX) + np.square(DoGY))#Amplitude를 구해주세요.
 
-# cv2.imshow("DoG", DoG)
+cv2.imshow("DoG", DoG)
 cv2.imshow("LoG", LoG)
 
 cv2.waitKey()
