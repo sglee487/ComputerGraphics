@@ -37,36 +37,54 @@ def my_HCD(src, method, blockSize, ksize, sigma1, sigma2, k):
 
     R = np.zeros(src.shape)  # Corner response를 받을 matrix 미리 생성
 
-    offset = blockSize // 2
-
     #DoG. 배포해 드린 파일의 함수를 사용하세요.
-
+    # gradX = my_DoG(src, ksize, sigma1, gx=1, boundary = 2)
+    # gradY = my_DoG(src, ksize, sigma1, gx=0, boundary = 2)
     #Sobel. cv2.Sobel 함수 이용하시면 됩니다.
+    gradX = cv2.Sobel(src, cv2.CV_32F, dx = 1, dy = 0, ksize = ksize)
+    gradY = cv2.Sobel(src, cv2.CV_32F, dx = 0, dy = 1, ksize = ksize)
 
     #Covariance matrix 계산
+    IxIx = np.multiply(gradX,gradX)
+    IxIy = np.multiply(gradX,gradY)
+    IyIy = np.multiply(gradY,gradY)
+    IxIxGaussian = cv2.GaussianBlur(IxIx,(blockSize,blockSize),sigma2)
+    IxIyGaussian = cv2.GaussianBlur(IxIy, (blockSize, blockSize), sigma2)
+    IyIyGaussian = cv2.GaussianBlur(IyIy, (blockSize, blockSize), sigma2)
 
-    lam = np.zeros((y,x,2))
-    R = np.zeros((y,x))
+
+    M = np.zeros((2,2))
     # harris 방법
     if method == "HARRIS":
-        for i in range(offset, y-offset):
-            for j in range(offset, x-offset):
+        for i in range(y):
+            for j in range(x):
                 #Harris 방법으로 R을 계산하세요.
-                lam[i,j] = get_eig_custom(src,(i,j),blockSize,ksize,sigma1,sigma2)
-                det = lam[i,j,0] * lam[i,j,1]
-                tr = lam[i,j,0] + lam[i,j,1]
+                M[0,0] = np.sum(IxIxGaussian[i,j])
+                M[0,1] = M[1,0] = np.sum(IxIyGaussian[i,j])
+                M[1,1] = np.sum(IyIyGaussian[i,j])
+                lam = np.linalg.eigvals(M)
+                det = lam[0] * lam[1]
+                tr = lam[0] + lam[1]
                 R[i,j] = det - k * (tr ** 2)
 
-    # # Kanade & Tomasi 방법
+
+    # Kanade & Tomasi 방법
     elif method == "K&T":
-        for i in range(offset, y-offset):
-            for j in range(offset, x-offset):
-                lam[i, j] = get_eig_custom(src, (i, j), blockSize, ksize, sigma1, sigma2)
-                R[i, j] = np.min(lam[i,j])
-	#Kanade & Tomasi 방법으로 R을 계산하세요.
+        for i in range(y):
+            for j in range(x):
+                #Kanade & Tomasi 방법으로 R을 계산하세요.
+                M[0,0] = np.sum(IxIxGaussian[i,j])
+                M[0,1] = M[1,0] = np.sum(IxIyGaussian[i,j])
+                M[1,1] = np.sum(IyIyGaussian[i,j])
+                lam = np.linalg.eigvals(M)
+                R[i,j] = np.min(lam)
+
+
 
     return R
 
+# 픽셀 단위 쓰면 안된다고 해서 이제 안쓰는 함수.
+'''
 def get_eig_custom(src, target, blockSize, ksize, sigma1, sigma2):
     y,x = target[0], target[1]
     offset = blockSize // 2
@@ -94,6 +112,7 @@ def get_eig_custom(src, target, blockSize, ksize, sigma1, sigma2):
     lam = np.linalg.eigvals(M)
 
     return lam
+'''
 
 
 src = cv2.imread('./building.jpg')
