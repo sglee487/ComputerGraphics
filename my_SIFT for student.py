@@ -2,15 +2,34 @@ import cv2
 import numpy as np
 
 def get_extrema(DoG, ext):
+    print(DoG.shape)
     for i in range(1, 4):
         for j in range(1, DoG.shape[0]-1):
             for k in range(1, DoG.shape[1]-1):
                 # 최대값 혹은 최소값인 지점을 extrema로 구해주세요.
-                if ('''if 조건을 작성하세요.'''):
+                DoG1localMax = np.max(DoG[j-1:j+2,k-1:k+2,i-1])
+                DoG1localMin = np.min(DoG[j-1:j+2,k-1:k+2,i-1])
+                DoG2localMax = np.max(DoG[j-1:j+2,k-1:k+2,i])
+                DoG2localMin = np.min(DoG[j-1:j+2,k-1:k+2,i])
+                DoG3localMax = np.max(DoG[j-1:j+2,k-1:k+2,i+1])
+                DoG3localMin = np.min(DoG[j-1:j+2,k-1:k+2,i+1])
+                # print("i: {}, j: {}, k: {} ".format(i,j,k))
+                # print(DoG1localMax)
+                allLocalMax = max(DoG1localMax,DoG2localMax,DoG3localMax)
+                allLocalMin = min(DoG1localMin,DoG2localMin,DoG3localMin)
+                # print(allLocalMax)
+                # print(allLocalMin)
+                if ((allLocalMax == DoG[j][k][i]) or (allLocalMin == DoG[j][k][i])):
                     # xhat과 D(xhat)을 구하기 위한 미분을 수행해주세요.
-
-                    xhat = np.linalg.lstsq(-H, dD, rcond=-1)[0]
-                    Dxhat = target + 0.5 * np.dot(dD.transpose(), xhat)
+                    print("good")
+                    dDdx = (DoG[j,k+1,i]-DoG[j,k-1,i])/2
+                    dDdy = (DoG[j+1,k,i]-DoG[j-1,k,i])/2
+                    dDds = (DoG[j,k+1,i+1]-DoG[j,k,i-1])/2
+                    d2Ddx2 = DoG[j,k+1,i] - DoG[j,k-1,i] + 2 * DoG[j,k,i]
+                    d2Ddy2 = DoG[j+1, k , i] - DoG[j-1, k - 1, i] + 2 * DoG[j, k, i]
+                    d2Dds2 = DoG[j, k , i+1] - DoG[j, k , i-1] + 2 * DoG[j, k, i]
+                    # xhat = np.linalg.lstsq(-H, dD, rcond=-1)[0]
+                    # Dxhat = target + 0.5 * np.dot(dD.transpose(), xhat)
 
                     # Thresholding을 수행해주세요. ( 적절한 위치만 ext 배열에 저장해주세요, )
     return ext
@@ -26,10 +45,10 @@ def SIFT(src, thresh, r):
     lv4sigma = np.array([s * (k**9) , s * (k**10), s * (k**11), s * (k**12), s * (k**13), s * (k**14) ]) #quater size image #start : 8 * sigma
 
     #image resize
-    doubled = #원본의 2배로 이미지를 resize 해주세요. cv2.INTER_LINEAR, cv2.INTER_NEAREST 자유롭게 사용.
-    normal = #원본과 동일
-    half = #가로 세로 각각 1/2
-    quarter = #가로 세로 각각 1/4
+    doubled = cv2.resize(src,None,fx=2,fy=2,interpolation=cv2.INTER_LINEAR) #원본의 2배로 이미지를 resize 해주세요. cv2.INTER_LINEAR, cv2.INTER_NEAREST 자유롭게 사용.
+    normal = src #원본과 동일
+    half = cv2.resize(src,None,fx=0.5,fy=0.5,interpolation=cv2.INTER_LINEAR) #가로 세로 각각 1/2
+    quarter = cv2.resize(src,None,fx=0.25,fy=0.25,interpolation=cv2.INTER_LINEAR) #가로 세로 각각 1/4
 
     # Gaussian 피라미드 저장할 3차원 배열
     lv1py = np.zeros((doubled.shape[0], doubled.shape[1], 6))
@@ -37,12 +56,25 @@ def SIFT(src, thresh, r):
     lv3py = np.zeros((half.shape[0], half.shape[1], 6))
     lv4py = np.zeros((quarter.shape[0], quarter.shape[1], 6))
 
+    print(doubled.shape)
+    print(lv1py.shape)
     print('make gaussian pyr')
     # Gaussian을 계산
     # ksize = 2 * int(4 * sigma + 0.5) + 1
     for i in range(6):
         #Gaussian Pyramids를 만들어주세요.
         #예제에서는 한 Level(Octave)에 6개의 Gaussian Image가 저장됩니다.
+        ksize = 2 * int(4 * lv1sigma[i] + 0.5) + 1
+        lv1py[:,:,i] = cv2.GaussianBlur(doubled, (ksize, ksize), lv1sigma[i])
+
+        ksize = 2 * int(4 * lv2sigma[i] + 0.5) + 1
+        lv2py[:,:,i] = cv2.GaussianBlur(normal,(ksize,ksize),lv2sigma[i])
+
+        ksize = 2 * int(4 * lv3sigma[i] + 0.5) + 1
+        lv3py[:,:,i] = cv2.GaussianBlur(half,(ksize,ksize),lv3sigma[i])
+
+        ksize = 2 * int(4 * lv4sigma[i] + 0.5) + 1
+        lv4py[:,:,i] = cv2.GaussianBlur(quarter,(ksize,ksize),lv4sigma[i])
 
     #DoG 피라미드를 저장할 3차원 배열
     DoGlv1 = np.zeros((doubled.shape[0], doubled.shape[1], 5))
@@ -55,6 +87,10 @@ def SIFT(src, thresh, r):
     # DoG를 계산
     for i in range(5):
         #Difference of Gaussian Image pyramids 를 구해주세요.
+        DoGlv1[:,:,i] = cv2.subtract(lv1py[:,:,i],lv1py[:,:,i+1])
+        DoGlv2[:,:,i] = cv2.subtract(lv2py[:,:,i],lv2py[:,:,i+1])
+        DoGlv3[:,:,i] = cv2.subtract(lv3py[:,:,i],lv3py[:,:,i+1])
+        DoGlv4[:,:,i] = cv2.subtract(lv4py[:,:,i],lv4py[:,:,i+1])
 
     # 극값의 위치를 표시할 3차원 배열
     extPy1 = np.zeros((doubled.shape[0], doubled.shape[1], 3))
@@ -76,26 +112,26 @@ def SIFT(src, thresh, r):
     #값 저장
     count = 0 #keypoints 수를 Count
 
-    for i in range(3):
-        for j in range(doubled.shape[0]):
-            for k in range(doubled.shape[1]):
-                #Lv1
-                #Keypoints 배열에 Keypoint의 정보를 저장하세요. 함수로 만들어서 수행하셔도 됩니다.
-    for i in range(3):
-        for j in range(normal.shape[0]):
-            for k in range(normal.shape[1]):
-                #Lv2
-                #Keypoints 배열에 Keypoint의 정보를 저장하세요.
-    for i in range(3):
-        for j in range(half.shape[0]):
-            for k in range(half.shape[1]):
-                #Lv3
-                #Keypoints 배열에 Keypoint의 정보를 저장하세요.
-    for i in range(3):
-        for j in range(quarter.shape[0]):
-            for k in range(quarter.shape[1]):
-                #Lv4
-                #Keypoints 배열에 Keypoint의 정보를 저장하세요.
+    # for i in range(3):
+    #     for j in range(doubled.shape[0]):
+    #         for k in range(doubled.shape[1]):
+    #             #Lv1
+    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요. 함수로 만들어서 수행하셔도 됩니다.
+    # for i in range(3):
+    #     for j in range(normal.shape[0]):
+    #         for k in range(normal.shape[1]):
+    #             #Lv2
+    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요.
+    # for i in range(3):
+    #     for j in range(half.shape[0]):
+    #         for k in range(half.shape[1]):
+    #             #Lv3
+    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요.
+    # for i in range(3):
+    #     for j in range(quarter.shape[0]):
+    #         for k in range(quarter.shape[1]):
+    #             #Lv4
+    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요.
 
     return keypoints
 
