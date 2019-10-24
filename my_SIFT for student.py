@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 
 def get_extrema(DoG, ext):
-    print(DoG.shape)
     for i in range(1, 4):
         for j in range(1, DoG.shape[0]-1):
             for k in range(1, DoG.shape[1]-1):
@@ -13,25 +12,41 @@ def get_extrema(DoG, ext):
                 DoG2localMin = np.min(DoG[j-1:j+2,k-1:k+2,i])
                 DoG3localMax = np.max(DoG[j-1:j+2,k-1:k+2,i+1])
                 DoG3localMin = np.min(DoG[j-1:j+2,k-1:k+2,i+1])
-                # print("i: {}, j: {}, k: {} ".format(i,j,k))
-                # print(DoG1localMax)
                 allLocalMax = max(DoG1localMax,DoG2localMax,DoG3localMax)
                 allLocalMin = min(DoG1localMin,DoG2localMin,DoG3localMin)
-                # print(allLocalMax)
-                # print(allLocalMin)
                 if ((allLocalMax == DoG[j][k][i]) or (allLocalMin == DoG[j][k][i])):
                     # xhat과 D(xhat)을 구하기 위한 미분을 수행해주세요.
-                    print("good")
                     dDdx = (DoG[j,k+1,i]-DoG[j,k-1,i])/2
                     dDdy = (DoG[j+1,k,i]-DoG[j-1,k,i])/2
-                    dDds = (DoG[j,k+1,i+1]-DoG[j,k,i-1])/2
+                    dDds = (DoG[j,k,i+1]-DoG[j,k,i-1])/2
                     d2Ddx2 = DoG[j,k+1,i] - DoG[j,k-1,i] + 2 * DoG[j,k,i]
-                    d2Ddy2 = DoG[j+1, k , i] - DoG[j-1, k - 1, i] + 2 * DoG[j, k, i]
+                    d2Ddy2 = DoG[j+1, k , i] - DoG[j-1, k, i] + 2 * DoG[j, k, i]
                     d2Dds2 = DoG[j, k , i+1] - DoG[j, k , i-1] + 2 * DoG[j, k, i]
-                    # xhat = np.linalg.lstsq(-H, dD, rcond=-1)[0]
-                    # Dxhat = target + 0.5 * np.dot(dD.transpose(), xhat)
+                    d2Ddxy = (((DoG[j+1,k+1,i]) - DoG[j+1,k-1,i])-((DoG[j-1,k+1,i]-DoG[j-1,k-1,i])))/4
+                    d2Ddxs = (((DoG[j, k + 1, i+1]) - DoG[j, k - 1, i+1]) - (
+                    (DoG[j, k + 1, i-1] - DoG[j, k - 1, i-1]))) / 4
+                    d2Ddys = (((DoG[j + 1, k, i+1]) - DoG[j + 1, k, i-1]) - (
+                    (DoG[j - 1, k, i+1] - DoG[j - 1, k, i-1]))) / 4
+
+                    H = [[d2Ddx2,d2Ddxy,d2Ddxs],[d2Ddxy,d2Ddy2,d2Ddxy],[d2Ddxs,d2Ddys,d2Dds2]]
+                    dD = np.transpose([dDdx,dDdy,dDds])
+
+                    xhat = np.linalg.lstsq(np.dot(-1,H), dD, rcond=-1)[0]
+                    target = DoG[j,k,i]
+                    Dxhat = target + 0.5 * np.dot(dD.transpose(), xhat)
 
                     # Thresholding을 수행해주세요. ( 적절한 위치만 ext 배열에 저장해주세요, )
+                    if(np.abs(Dxhat) < thresh or np.min(np.abs(xhat)) > 0.5):
+                        continue
+
+                    Hpart = np.array([[d2Ddx2,d2Ddxy],[d2Ddxy,d2Ddy2]])
+                    traceHpartsquare = np.trace(Hpart) ** 2
+                    detHpart = np.linalg.det(Hpart)
+                    rc = ((r + 1) ** 2)/r
+                    if (detHpart<0 or (traceHpartsquare/detHpart) > rc):
+                        continue
+                    ext[j,k,i-1] = 1
+
     return ext
 
 def SIFT(src, thresh, r):
@@ -56,8 +71,6 @@ def SIFT(src, thresh, r):
     lv3py = np.zeros((half.shape[0], half.shape[1], 6))
     lv4py = np.zeros((quarter.shape[0], quarter.shape[1], 6))
 
-    print(doubled.shape)
-    print(lv1py.shape)
     print('make gaussian pyr')
     # Gaussian을 계산
     # ksize = 2 * int(4 * sigma + 0.5) + 1
@@ -112,26 +125,46 @@ def SIFT(src, thresh, r):
     #값 저장
     count = 0 #keypoints 수를 Count
 
-    # for i in range(3):
-    #     for j in range(doubled.shape[0]):
-    #         for k in range(doubled.shape[1]):
-    #             #Lv1
-    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요. 함수로 만들어서 수행하셔도 됩니다.
-    # for i in range(3):
-    #     for j in range(normal.shape[0]):
-    #         for k in range(normal.shape[1]):
-    #             #Lv2
-    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요.
-    # for i in range(3):
-    #     for j in range(half.shape[0]):
-    #         for k in range(half.shape[1]):
-    #             #Lv3
-    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요.
-    # for i in range(3):
-    #     for j in range(quarter.shape[0]):
-    #         for k in range(quarter.shape[1]):
-    #             #Lv4
-    #             #Keypoints 배열에 Keypoint의 정보를 저장하세요.
+    for i in range(3):
+        for j in range(doubled.shape[0]):
+            for k in range(doubled.shape[1]):
+                #Lv1
+                #Keypoints 배열에 Keypoint의 정보를 저장하세요. 함수로 만들어서 수행하셔도 됩니다.
+                if (extPy1[j,k,i] == 1):
+                    keypoints[count,0] = j * 0.5
+                    keypoints[count,1] = k * 0.5
+                    keypoints[count,2] = i
+                    count += 1
+    for i in range(3):
+        for j in range(normal.shape[0]):
+            for k in range(normal.shape[1]):
+                #Lv2
+                #Keypoints 배열에 Keypoint의 정보를 저장하세요.
+                if (extPy2[j,k,i] == 1):
+                    keypoints[count,0] = j
+                    keypoints[count,1] = k
+                    keypoints[count,2] = i
+                    count += 1
+    for i in range(3):
+        for j in range(half.shape[0]):
+            for k in range(half.shape[1]):
+                #Lv3
+                #Keypoints 배열에 Keypoint의 정보를 저장하세요.
+                if (extPy3[j,k,i] == 1):
+                    keypoints[count,0] = j * 2
+                    keypoints[count,1] = k * 2
+                    keypoints[count,2] = i
+                    count += 1
+    for i in range(3):
+        for j in range(quarter.shape[0]):
+            for k in range(quarter.shape[1]):
+                #Lv4
+                #Keypoints 배열에 Keypoint의 정보를 저장하세요.
+                if (extPy4[j,k,i] == 1):
+                    keypoints[count,0] = j * 4
+                    keypoints[count,1] = k * 4
+                    keypoints[count,2] = i
+                    count += 1
 
     return keypoints
 
