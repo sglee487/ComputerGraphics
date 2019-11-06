@@ -9,3 +9,8 @@ bincount = np.bincount(array,minlength=8)
 
 print(bincount)
 print(bincount.shape[0])
+
+hist, bins = np.histogram(array,bins=50)
+
+print(hist)
+print(bins)

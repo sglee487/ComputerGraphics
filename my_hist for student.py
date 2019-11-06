@@ -45,23 +45,13 @@ def srcimageyx_hist(src):
     # Histogram을 계산해 주세요.
 
     imagehist = np.zeros((src.shape[0],src.shape[1],8*3),dtype=int)
-    temphist = np.zeros((src.shape[0], src.shape[1], 8 * 3), dtype=int)
-    for i in range(50,53):
-        for j in range(50,53):
-            histogramR = plt.hist(src[i, j, 0].flatten(), bins=8)[0].astype(int)
-            histogramG = plt.hist(src[i, j, 1].flatten(), bins=8)[0].astype(int)
-            histogramB = plt.hist(src[i, j, 2].flatten(), bins=8)[0].astype(int)
-            temphist[i,j] = np.concatenate((histogramR, histogramG, histogramB))
+    for i in range(0,imagehist.shape[0]):
+        for j in range(0,imagehist.shape[1]):
+            histogramR = np.histogram(src[i,j,0],bins=8,range=(0,255))[0]
+            histogramG = np.histogram(src[i,j,1], bins=8,range=(0,255))[0]
+            histogramB = np.histogram(src[i,j,2], bins=8,range=(0,255))[0]
+            imagehist[i,j] = np.concatenate((histogramR, histogramG, histogramB))
 
-    for i in range(150,155):
-        for j in range(150,155):
-            histogramR = plt.hist(src[i, j, 0].flatten(), bins=8)[0].astype(int)
-            histogramG = plt.hist(src[i, j, 1].flatten(), bins=8)[0].astype(int)
-            histogramB = plt.hist(src[i, j, 2].flatten(), bins=8)[0].astype(int)
-            temphist[i,j] = np.concatenate((histogramR, histogramG, histogramB))
-    temphist
-
-    imagehist[:, :] = (np.concatenate((plt.hist(src[:, :, 0].flatten(), bins=8)[0].astype(int), plt.hist(src[:, :, 1].flatten(), bins=8)[0].astype(int), plt.hist(src[:, :, 2].flatten(), bins=8)[0].astype(int))))
     print(imagehist.shape)
     return imagehist
 
@@ -87,13 +77,15 @@ def get_minDist(src, target, start):
     listG = np.zeros((8))
     listB = np.zeros((8))
     print(listR.shape)
+
+    # sourcehist = my_hist(src)
     for i in range(offset_y-5, offset_y+5):
         for j in range(offset_x-5, offset_x+5):               #이전 frame에서 object가 검출된 위치를 기준으로 상,하,좌,우 20pixel 폭만 검사.
 
             calhist = my_hist(src[i:i+ty,j:j+tx,:])
-            print(calhist)
-            ra = srcimageyxhist[i:i+ty,j:j+tx,0:8]
-            print(ra)
+            # print(calhist)
+            # ra = srcimageyxhist[i:i+ty,j:j+tx,0:8]
+            # print(ra)
             diffhistlist = sourcehist - calhist
             diffhistlistsquare = diffhistlist ** 2
             plushistlist = sourcehist + calhist
