@@ -15,8 +15,9 @@ def my_divHist(fr):
 
     for i in range(div):
         for j in range(div):
-
+            pass
     # 여기까지
+    hist = [0,1]
     return hist
 
 #color histogram 생성.
@@ -27,8 +28,42 @@ def my_hist(fr):
     '''
 
     # Histogram을 계산해 주세요.
-
+    histogramR = plt.hist(fr[:,:,0].flatten(),bins=8)[0].astype(int)
+    histogramG = plt.hist(fr[:,:,1].flatten(),bins=8)[0].astype(int)
+    histogramB = plt.hist(fr[:,:,2].flatten(),bins=8)[0].astype(int)
+    #
+    hist = np.concatenate((histogramR,histogramG,histogramB))
     return hist
+
+#color histogram 생성.
+def srcimageyx_hist(src):
+    '''
+    :param fr: histogram을 구하고자 하는 대상 영역
+    :return: fr의 color histogram
+    '''
+
+    # Histogram을 계산해 주세요.
+
+    imagehist = np.zeros((src.shape[0],src.shape[1],8*3),dtype=int)
+    temphist = np.zeros((src.shape[0], src.shape[1], 8 * 3), dtype=int)
+    for i in range(50,53):
+        for j in range(50,53):
+            histogramR = plt.hist(src[i, j, 0].flatten(), bins=8)[0].astype(int)
+            histogramG = plt.hist(src[i, j, 1].flatten(), bins=8)[0].astype(int)
+            histogramB = plt.hist(src[i, j, 2].flatten(), bins=8)[0].astype(int)
+            temphist[i,j] = np.concatenate((histogramR, histogramG, histogramB))
+
+    for i in range(150,155):
+        for j in range(150,155):
+            histogramR = plt.hist(src[i, j, 0].flatten(), bins=8)[0].astype(int)
+            histogramG = plt.hist(src[i, j, 1].flatten(), bins=8)[0].astype(int)
+            histogramB = plt.hist(src[i, j, 2].flatten(), bins=8)[0].astype(int)
+            temphist[i,j] = np.concatenate((histogramR, histogramG, histogramB))
+    temphist
+
+    imagehist[:, :] = (np.concatenate((plt.hist(src[:, :, 0].flatten(), bins=8)[0].astype(int), plt.hist(src[:, :, 1].flatten(), bins=8)[0].astype(int), plt.hist(src[:, :, 2].flatten(), bins=8)[0].astype(int))))
+    print(imagehist.shape)
+    return imagehist
 
 #주변을 탐색해, 최단 거리를 가진 src의 영역을 return
 def get_minDist(src, target, start):
@@ -47,10 +82,26 @@ def get_minDist(src, target, start):
 
     # histogram을 계산하고, 각 histogram간 거리를 계산.
     # 거리가 최소가 되는 지점의 좌표 4개를 coord에 저장한다.
+    srcimageyxhist = srcimageyx_hist(src)
+    listR = np.zeros((8))
+    listG = np.zeros((8))
+    listB = np.zeros((8))
+    print(listR.shape)
+    for i in range(offset_y-5, offset_y+5):
+        for j in range(offset_x-5, offset_x+5):               #이전 frame에서 object가 검출된 위치를 기준으로 상,하,좌,우 20pixel 폭만 검사.
 
-    for i in range(offset_y-20, offset_y+20):
-        for j in range(offset_x-20, offset_x+20):               #이전 frame에서 object가 검출된 위치를 기준으로 상,하,좌,우 20pixel 폭만 검사.
-
+            calhist = my_hist(src[i:i+ty,j:j+tx,:])
+            print(calhist)
+            ra = srcimageyxhist[i:i+ty,j:j+tx,0:8]
+            print(ra)
+            diffhistlist = sourcehist - calhist
+            diffhistlistsquare = diffhistlist ** 2
+            plushistlist = sourcehist + calhist
+            squaredivplus = diffhistlistsquare / plushistlist
+            sumsquaredivplus = sum(squaredivplus)
+            if(sumsquaredivplus < min):
+                min = sumsquaredivplus
+                coord = (i,j,i+ty,j+tx)
     # 여기까지 (my_hist, my_divHist 자유롭게 사용하되 둘다 기능을 정상적으로 수행해야함.)
 
     return coord
