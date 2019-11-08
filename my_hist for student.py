@@ -12,12 +12,15 @@ def my_divHist(fr):
     divY, divX = y // div, x // div # 3등분 된 offset 계산.
 
     # cell 단위의 histogram을 계산하기 위해 필요한 작업 및 계산을 수행하세요.
-
+    hist = np.zeros((0,),dtype=int)
     for i in range(div):
         for j in range(div):
-            pass
+            histogramR = np.histogram(fr[divY*i:divY*(i+1), divX*i:divX*(j+1), 0], bins=8, range=(0, 255))[0]
+            histogramG = np.histogram(fr[divY*i:divY*(i+1), divX*i:divX*(j+1), 1], bins=8, range=(0, 255))[0]
+            histogramB = np.histogram(fr[divY*i:divY*(i+1), divX*i:divX*(j+1), 2], bins=8, range=(0, 255))[0]
+            hist = np.concatenate((hist,histogramR, histogramG, histogramB))
     # 여기까지
-    hist = [0,1]
+
     return hist
 
 #color histogram 생성.
@@ -28,15 +31,16 @@ def my_hist(fr):
     '''
 
     # Histogram을 계산해 주세요.
-    histogramR = plt.hist(fr[:,:,0].flatten(),bins=8)[0].astype(int)
-    histogramG = plt.hist(fr[:,:,1].flatten(),bins=8)[0].astype(int)
-    histogramB = plt.hist(fr[:,:,2].flatten(),bins=8)[0].astype(int)
-    #
-    hist = np.concatenate((histogramR,histogramG,histogramB))
+    histogramR = np.histogram(fr[:, :, 0], bins=8, range=(0, 255))[0]
+    histogramG = np.histogram(fr[:, :, 1], bins=8, range=(0, 255))[0]
+    histogramB = np.histogram(fr[:, :, 2], bins=8, range=(0, 255))[0]
+
+    hist = np.concatenate((histogramR, histogramG, histogramB))
+
     return hist
 
 #color histogram 생성.
-def srcimageyx_hist(src):
+def srcimageyx_hist(fr):
     '''
     :param fr: histogram을 구하고자 하는 대상 영역
     :return: fr의 color histogram
@@ -44,15 +48,14 @@ def srcimageyx_hist(src):
 
     # Histogram을 계산해 주세요.
 
-    imagehist = np.zeros((src.shape[0],src.shape[1],8*3),dtype=int)
+    imagehist = np.zeros((fr.shape[0],fr.shape[1],8*3),dtype=int)
     for i in range(0,imagehist.shape[0]):
         for j in range(0,imagehist.shape[1]):
-            histogramR = np.histogram(src[i,j,0],bins=8,range=(0,255))[0]
-            histogramG = np.histogram(src[i,j,1], bins=8,range=(0,255))[0]
-            histogramB = np.histogram(src[i,j,2], bins=8,range=(0,255))[0]
+            histogramR = np.histogram(fr[i,j,0],bins=8,range=(0,255))[0]
+            histogramG = np.histogram(fr[i,j,1], bins=8,range=(0,255))[0]
+            histogramB = np.histogram(fr[i,j,2], bins=8,range=(0,255))[0]
             imagehist[i,j] = np.concatenate((histogramR, histogramG, histogramB))
 
-    print(imagehist.shape)
     return imagehist
 
 #주변을 탐색해, 최단 거리를 가진 src의 영역을 return
@@ -72,30 +75,40 @@ def get_minDist(src, target, start):
 
     # histogram을 계산하고, 각 histogram간 거리를 계산.
     # 거리가 최소가 되는 지점의 좌표 4개를 coord에 저장한다.
-    srcimageyxhist = srcimageyx_hist(src)
-    listR = np.zeros((8))
-    listG = np.zeros((8))
-    listB = np.zeros((8))
-    print(listR.shape)
+    srcoffsetimageyxhist = np.zeros((src.shape[0],src.shape[1],8*3),dtype=int)
+    srcoffsetimageyxhist[offset_y-5:offset_y+5+ty,offset_x-5:offset_x+5+tx,:] = srcimageyx_hist(src[offset_y-5:offset_y+5+ty,offset_x-5:offset_x+5+tx,:])
 
-    # sourcehist = my_hist(src)
-    for i in range(offset_y-5, offset_y+5):
-        for j in range(offset_x-5, offset_x+5):               #이전 frame에서 object가 검출된 위치를 기준으로 상,하,좌,우 20pixel 폭만 검사.
+    # sourcehist = my_hist(target)
+    sourcehist = my_divHist(target)
+    for i in range(offset_y-20, offset_y+20):
+        for j in range(offset_x-20, offset_x+20):               #이전 frame에서 object가 검출된 위치를 기준으로 상,하,좌,우 20pixel 폭만 검사.
+            # my_hist 함수를 쓸 땐 이 밑을 사용
+            # histr = srcoffsetimageyxhist[i:i+ty,j:j+tx].sum(axis=0)
+            # calhist = histr.sum(axis=0)
 
-            calhist = my_hist(src[i:i+ty,j:j+tx,:])
-            # print(calhist)
-            # ra = srcimageyxhist[i:i+ty,j:j+tx,0:8]
-            # print(ra)
+            # my_divHist 함수를 쓸 땐 이 밑을 사용
+            div = 3  # 3x3 분할
+            divY, divX = ty // div, tx // div  # 3등분 된 offset 계산.
+            histd = np.zeros((0,), dtype=int)
+            for k in range(div):
+                for l in range(div):
+                    histogramRGB = srcoffsetimageyxhist[i+divY*k:i+divY*(k+1),j+divX*k:j+divY*(l+1)].sum(axis=0)
+                    histd = np.concatenate((histd,histogramRGB.sum(axis=0)))
+            calhist = histd
+
             diffhistlist = sourcehist - calhist
             diffhistlistsquare = diffhistlist ** 2
+            sumdiffhistlistsquare = sum(diffhistlistsquare)
             plushistlist = sourcehist + calhist
-            squaredivplus = diffhistlistsquare / plushistlist
-            sumsquaredivplus = sum(squaredivplus)
-            if(sumsquaredivplus < min):
-                min = sumsquaredivplus
-                coord = (i,j,i+ty,j+tx)
-    # 여기까지 (my_hist, my_divHist 자유롭게 사용하되 둘다 기능을 정상적으로 수행해야함.)
+            sumplushistlist = sum(plushistlist)
+            divsumhistlistsquaresumplushistlist = sumdiffhistlistsquare / sumplushistlist
+            if(divsumhistlistsquaresumplushistlist < min):
+                min = divsumhistlistsquaresumplushistlist
+                coord = (j,i,j+tx,i+ty)
 
+    # 여기까지 (my_hist, my_divHist 자유롭게 사용하되 둘다 기능을 정상적으로 수행해야함.)
+    print(min)
+    print(coord)
     return coord
 
 # Mouse Event를 setting 하는 영역
