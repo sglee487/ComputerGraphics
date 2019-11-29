@@ -79,10 +79,10 @@ def my_LS(matches, kp1, kp2):
         B[(2*i)] = kp2[i].pt[0]
         B[(2 * i)+1] = kp2[i].pt[1]
 
-    print(A)
-    print(B)
-    print(A ** -1)
-
+    tempA = np.power(np.matmul(A.T,A),-1)
+    tempA[tempA == np.inf]=0
+    X = np.matmul(np.matmul(tempA,A.T),B)
+    print(X)
 
 
     return X
