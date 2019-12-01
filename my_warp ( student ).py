@@ -68,24 +68,16 @@ def my_LS(matches, kp1, kp2):
 
     '''행렬 A,B를 만들고 이를 이용해 X를 구해주세요.'''
 
-    print(matches[0].trainIdx)
-    print(matches[0].queryIdx)
     A = np.zeros((length*2,6))
     B = np.zeros((length*2,1))
     X = np.zeros((length*2,1))
     for i in range(0,length):
-        # A[(2*i),0:3] = [kp1[i].pt[0],kp1[i].pt[1],1]
-        # A[(2*i)+1,3:6] = [kp1[i].pt[0],kp1[i].pt[1],1]
-        # B[(2*i)] = kp2[i].pt[0]
-        # B[(2 * i)+1] = kp2[i].pt[1]
-
         A[(2 * i), 0:3] = [kp1[matches[i].queryIdx].pt[0], kp1[matches[i].queryIdx].pt[1], 1]
         A[(2 * i) + 1, 3:6] = [kp1[matches[i].queryIdx].pt[0], kp1[matches[i].queryIdx].pt[1], 1]
         B[(2 * i)] = kp2[matches[i].trainIdx].pt[0]
         B[(2 * i) + 1] = kp2[matches[i].trainIdx].pt[1]
 
     X = np.matmul(np.linalg.pinv(A),B)
-    print(X)
 
     return X
 
@@ -106,11 +98,9 @@ def my_forward(img, X):
 
     '''X를 이용해 Affine matrix M을 만드세요.'''
     M = np.zeros((3,3))
-    print(X.T)
     M[0] = X.T[0,0:3]
     M[1] = X.T[0,3:6]
     M[2,2] = 1
-    print(M)
 
     for i in range(y):
         for j in range(x):
@@ -127,7 +117,6 @@ def my_forward(img, X):
 
     result = np.divide(result, count)
     result[np.isnan(result)] = 0                    #divide 후 not a number 처리
-    print(result.shape)
     return result
 
 #backward warping을 수행
@@ -149,26 +138,17 @@ def my_backward(img, X):
     M[0] = X.T[0,0:3]
     M[1] = X.T[0,3:6]
     M[2,2] = 1
-    print(M)
-    Mr = np.power(M,-1)
-    Mr[Mr == np.inf] = 0
-    print(Mr)
-
+    Mr = np.linalg.inv(M)
     for i in range(y):
         for j in range(x):
-            '''
-            M과 좌표 (x,y)를 이용해 새로운 좌표인 newX, newY를 구하세요.
-            '''
-            oldPosition = np.array([i,j,1])
-            newPosition = np.matmul(M,oldPosition.T).astype(int)
-            newX = newPosition[0]
-            newY = newPosition[1]
-            if newY < y and newX < x and newY > 0 and newX > 0:
-                result[newY, newX, :] += img[i,j,:] #값을 해당 좌표에 합산
-                count[newY, newX, :] += 1           #몇 개의 값이 한 좌표에 겹쳤는지 count
 
-    result = np.divide(result, count)
-    result[np.isnan(result)] = 0                    #divide 후 not a number 처리
+            desPosition = np.array([j,i,1])
+            oriPosition = np.matmul(Mr,desPosition.T).astype(int)
+            color = my_bilinear(img,oriPosition[0],oriPosition[1])
+            # print(color)
+            # print(j,i)
+            result[i,j] = color
+
     print(result.shape)
     return result
 
@@ -201,12 +181,12 @@ if __name__ == "__main__":
     X = my_LS(matches[0:10], kp1, kp2)
 
     forward_result = my_forward(first, X)
-    # backward_result = my_backward(first, X)
+    backward_result = my_backward(first, X)
 
     cv2.imshow('first', first)
     cv2.imshow('target', target)
     cv2.imshow('forward', forward_result.astype(np.uint8))
-    # cv2.imshow('backward', backward_result.astype(np.uint8))
+    cv2.imshow('backward', backward_result.astype(np.uint8))
     cv2.waitKey()
     cv2.destroyAllWindows()
 
